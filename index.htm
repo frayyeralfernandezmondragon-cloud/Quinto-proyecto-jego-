@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Juego de la Culebrita Pro</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow-y: auto;
+            touch-action: none; 
+        }
+        
+        .pantalla {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .oculto { display: none !important; }
+
+        h1, h2 { margin: 5px 0; text-align: center; }
+        
+        .seccion-ajustes {
+            background: #333;
+            padding: 15px;
+            border-radius: 10px;
+            width: 100%;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+        .opcion-fila {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+        }
+        select, .btn-menu {
+            padding: 10px;
+            font-size: 16px;
+            background-color: #555;
+            color: white;
+            border: 1px solid #777;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-jugar {
+            width: 100%;
+            background-color: #4CAF50;
+            font-weight: bold;
+            font-size: 20px;
+            padding: 15px;
+            margin-top: 5px;
+        }
+        .btn-galeria {
+            width: 100%;
+            background-color: #00838F;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .cuadricula-colores {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .btn-color {
+            height: 45px;
+            border-radius: 5px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+        }
+        .btn-color.seleccionado { border-color: gold; }
+        .btn-color.bloqueado::after { content: "🔒"; font-size: 14px; }
+
+        .lista-galeria {
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .item-galeria {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #333;
+        }
+        .vista-previa-serpiente {
+            display: flex;
+            gap: 2px;
+        }
+        .bloque-preview {
+            width: 15px;
+            height: 15px;
+            border-radius: 2px;
+        }
+        .bloque-preview.cabeza {
+            position: relative;
+        }
+        .bloque-preview.cabeza::before, .bloque-preview.cabeza::after {
+            content: "";
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: white;
+            top: 4px;
+        }
+        .bloque-preview.cabeza::before { left: 3px; }
+        .bloque-preview.cabeza::after { right: 3px; }
+
+        #marcador {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .datos-fila { display: flex; gap: 20px; }
+        #record-display { color: #FFD700; font-weight: bold; }
+
+        canvas {
+            border: 4px solid #fff;
+            background-color: #111;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            width: 340px;
+            height: 340px;
+        }
+
+        .cuadrado-controles {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(2, 65px);
+            grid-template-rows: repeat(2, 65px);
+            gap: 10px;
+        }
+        .btn-control {
+            width: 65px;
+            height: 65px;
+            font-size: 24px;
+            background-color: #444;
+            color: white;
+            border: 2px solid #666;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .btn-control:active { background-color: #666; transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+    <div id="pantalla-menu" class="pantalla">
+        <h1 id="txt-titulo-menu">Culebrita Ajustes</h1>
+        <div id="menu-monedas" style="color: #FF9800; font-size: 18px; margin-bottom: 15px; font-weight: bold;">🪙 Monedas: 0</div>
+        
+        <div class="seccion-ajustes">
+            <div class="opcion-fila">
+                <span id="txt-label-idioma" style="font-weight: bold;">Idioma / Language:</span>
+                <select id="select-idioma" onchange="cambiarIdioma(this.value)">
+                    <option value="es">Español</option>
+                    <option value="en">English</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="seccion-ajustes">
+            <div id="txt-label-colores" style="font-weight: bold; margin-bottom: 5px;">Color de la Culebrita (Costo: 100 🪙):</div>
+            <div class="cuadricula-colores" id="contenedor-colores"></div>
+        </div>
+
+        <button id="btn-ver-galeria" class="btn-galeria" onclick="mostrarPantallaGaleria()">🔍 Ver Culebritas</button>
+
+        <button id="btn-jugar-menu" class="btn-menu btn-jugar" onclick="iniciarJuego()">¡JUGAR!</button>
+    </div>
+
+    <div id="pantalla-galeria" class="pantalla oculto">
+        <h2 id="txt-titulo-galeria">Todas las Culebritas 🐍</h2>
+        <br>
+        <div class="lista-galeria" id="contenedor-lista-galeria"></div>
+        <br>
+        <button id="btn-cerrar-galeria" class="btn-menu" style="width: 100%;" onclick="cerrarPantallaGaleria()">Volver al Menú</button>
+    </div>
+
+    <div id="pantalla-juego" class="pantalla oculto">
+        <div id="marcador">
+            <div id="record-display">🏆 Récord: 0</div>
+            <div class="datos-fila">
+                <div id="puntuacion">Puntos: 0</div>
+                <div id="velocidad">Velocidad: 0.5x</div>
+            </div>
+        </div>
+        
+        <canvas id="juegoCanvas" width="400" height="400"></canvas>
+
+        <div class="cuadrado-controles">
+            <button class="btn-control" onclick="cambiarDireccion('ARRIBA')">⬆️</button>
+            <button class="btn-control" onclick="cambiarDireccion('DERECHA')">➡️</button>
+            <button class="btn-control" onclick="cambiarDireccion('IZQUIERDA')">⬅️</button>
+            <button class="btn-control" onclick="cambiarDireccion('ABAJO')">⬇️</button>
+        </div>
+        <button id="btn-volver" class="btn-menu" style="margin-top: 15px; width: 100%;" onclick="volverAlMenu()">Menú Principal</button>
+    </div>
+
+    <script>
+        const textos = {
+            es: {
+                titulo: "Culebrita Ajustes", jugar: "¡JUGAR!", idioma: "Idioma:", colores: "Color de la Culebrita (Costo: 100 🪙):",
+                record: "🏆 Récord Máximo: ", puntos: "Puntos: ", velocidad: "Velocidad: ", volver: "Menú Principal",
+                alertaPerdiste: "¡Perdiste! Puntos ganados: ", alertaMonedas: "\n¡Has ganado $ MONEDAS monedas!",
+                sinMonedas: "¡No tienes suficientes monedas! Cuesta 100.",
+                btnGaleria: "🔍 Ver Culebritas", tituloGaleria: "Todas las Culebritas 🐍", btnCerrarGaleria: "Volver al Menú",
+                estadoBloqueado: "Bloqueado 🔒", estadoComprado: "Desbloqueado ✅", estadoSeleccionado: "En Uso ⭐"
+            },
+            en: {
+                titulo: "Snake Settings", jugar: "PLAY!", idioma: "Language:", colores: "Snake Color (Cost: 100 🪙):",
+                record: "🏆 High Score: ", puntos: "Score: ", velocidad: "Speed: ", volver: "Main Menu",
+                alertaPerdiste: "Game Over! Score: ", alertaMonedas: "\nYou earned $ MONEDAS coins!",
+                sinMonedas: "Not enough coins! It costs 100.",
+                btnGaleria: "🔍 View Snakes", tituloGaleria: "All Snakes 🐍", btnCerrarGaleria: "Back to Menu",
+                estadoBloqueado: "Locked 🔒", estadoComprado: "Unlocked ✅", estadoSeleccionado: "In Use ⭐"
+            }
+        };
+
+        let idiomaActual = "es";
+        try { idiomaActual = localStorage.getItem("snakeIdioma") || "es"; } catch(e){}
+
+        const listaColores = [
+            { nombre: "Verde / Green", hex: "#4CAF50", cabeza: "#2E7D32" },
+            { nombre: "Azul / Blue", hex: "#2196F3", cabeza: "#1565C0" },
+            { nombre: "Rojo / Red", hex: "#F44336", cabeza: "#C62828" },
+            { nombre: "Amarillo / Yellow", hex: "#FFEB3B", cabeza: "#FBC02D" },
+            { nombre: "Naranja / Orange", hex: "#FF9800", cabeza: "#E65100" },
+            { nombre: "Morado / Purple", hex: "#9C27B0", cabeza: "#6A1B9A" },
+            { nombre: "Rosa / Pink", hex: "#E91E63", cabeza: "#AD1457" },
+            { nombre: "Cian / Cyan", hex: "#00BCD4", cabeza: "#00838F" },
+            { nombre: "Blanco / White", hex: "#FFFFFF", cabeza: "#BDBDBD" },
+            { nombre: "Gris / Gray", hex: "#9E9E9E", cabeza: "#424242" },
+            { nombre: "Marrón / Brown", hex: "#795548", cabeza: "#4E342E" },
+            { nombre: "Negro / Black", hex: "#37474F", cabeza: "#212121" }
+        ];
+
+        let monedas = 0;
+        let coloresComprados = [0]; 
+        let colorSeleccionadoIdx = 0;
+        let recordMaximo = 0;
+
+        try {
+            monedas = parseInt(localStorage.getItem("snakeMonedas")) || 0;
+            coloresComprados = JSON.parse(localStorage.getItem("snakeComprados")) || [0]; 
+            colorSeleccionadoIdx = parseInt(localStorage.getItem("snakeColorSel")) || 0;
+            recordMaximo = localStorage.getItem("recordSnake") || 0;
+        } catch(e) {}
+
+        const canvas = document.getElementById("juegoCanvas");
+        const ctx = canvas.getContext("2d");
+        const tamanoCuadro = 20;
+        const filas = canvas.height / tamanoCuadro;
+        const columnas = canvas.width / tamanoCuadro;
+
+        // AQUÍ SE CORRIGIÓ: Inicializamos el objeto comida correctamente
+        let culebrita = [];
+        let comida = { x: 0, y: 0 };
+        let dx = tamanoCuadro, dy = 0, colorComida, puntos, velocidadActual, juegoActivo = false, timeoutId;
+        const coloresComidaLista = ["#FF5733", "#33FF57", "#3357FF", "#F3FF33", "#FF33F3"];
+
+        document.getElementById("select-idioma").value = idiomaActual;
+        actualizarInterfazTexto();
+        cargarTiendaColores();
+        document.addEventListener("keydown", cambiarDireccionTeclado);
+
+        function actualizarInterfazTexto() {
+            const t = textos[idiomaActual];
+            document.getElementById("txt-titulo-menu").innerText = t.titulo;
+            document.getElementById("btn-jugar-menu").innerText = t.jugar;
+            document.getElementById("txt-label-idioma").innerText = t.idioma;
+            document.getElementById("txt-label-colores").innerText = t.colores;
+            document.getElementById("btn-volver").innerText = t.volver;
+            document.getElementById("btn-ver-galeria").innerText = t.btnGaleria;
+            document.getElementById("txt-titulo-galeria").innerText = t.tituloGaleria;
+            document.getElementById("btn-cerrar-galeria").innerText = t.btnCerrarGaleria;
+            document.getElementById("menu-monedas").innerText = "🪙 Monedas: " + monedas;
+            document.getElementById("record-display").innerText = t.record + recordMaximo;
+            document.getElementById("puntuacion").innerText = t.puntos + "0";
+            document.getElementById("velocidad").innerText = t.velocidad + "0.5x";
+        }
+
+        function cambiarIdioma(nuevoIdioma) {
+            idiomaActual = nuevoIdioma;
+            try { localStorage.setItem("snakeIdioma", nuevoIdioma); } catch(e){}
+            actualizarInterfazTexto();
+        }
+
+        function cargarTiendaColores() {
+            const contenedor = document.getElementById("contenedor-colores");
+            contenedor.innerHTML = "";
+
+            listaColores.forEach((color, idx) => {
+                const btn = document.createElement("div");
+                btn.className = "btn-color";
+                btn.style.backgroundColor = color.hex;
+                
+                if (idx === colorSeleccionadoIdx) btn.classList.add("seleccionado");
+                if (!coloresComprados.includes(idx)) btn.classList.add("bloqueado");
+
+                btn.onclick = () => gestionarClickColor(idx);
+                contenedor.appendChild(btn);
+            });
+        }
+
+        function gestionarClickColor(idx) {
+            if (coloresComprados.includes(idx)) {
+                colorSeleccionadoIdx = idx;
+                try { localStorage.setItem("snakeColorSel", idx); } catch(e){}
+            } else {
+                if (monedas >= 100) {
+                    monedas -= 100;
+                    coloresComprados.push(idx);
+                    colorSeleccionadoIdx = idx;
+                    try {
+                        localStorage.setItem("snakeMonedas", monedas);
+                        localStorage.setItem("snakeComprados", JSON.stringify(coloresComprados));
+                        localStorage.setItem("snakeColorSel", idx);
+                    } catch(e){}
+                    document.getElementById("menu-monedas").innerText = "🪙 Monedas: " + monedas;
+                } else {
+                    alert(textos[idiomaActual].sinMonedas);
+                }
+            }
+            cargarTiendaColores();
+        }
+
+        function mostrarPantallaGaleria() {
+            document.getElementById("pantalla-menu").classList.add("oculto");
+            document.getElementById("pantalla-galeria").classList.remove("oculto");
+            
+            const contenedorLista = document.getElementById("contenedor-lista-galeria");
+            contenedorLista.innerHTML = "";
+            const t = textos[idiomaActual];
+
+            listaColores.forEach((color, idx) => {
+                const item = document.createElement("div");
+                item.className = "item-galeria";
+
+                let estado = t.estadoBloqueado;
+                if (idx === colorSeleccionadoIdx) {
+                    estado = t.estadoSeleccionado;
+                } else if (coloresComprados.includes(idx)) {
+                    estado = t.estadoComprado;
+                }
+
+                item.innerHTML = `
+                    <div style="font-size:14px; font-weight:bold;">${color.nombre} <br><span style="font-size:11px; color:gold;">${estado}</span></div>
+                    <div class="vista-previa-serpiente">
+                        <div class="bloque-preview cabeza" style="background-color: ${color.cabeza};"></div>
+                        <div class="bloque-preview" style="background-color: ${color.hex};"></div>
+                        <div class="bloque-preview" style="background-color: ${color.hex};"></div>
+                    </div>
+                `;
+                contenedorLista.appendChild(item);
+            });
+        }
+
+        function cerrarPantallaGaleria() {
+            document.getElementById("pantalla-galeria").classList.add("oculto");
+            document.getElementById("pantalla-menu").classList.remove("oculto");
+        }
+
+        function iniciarJuego() {
+            document.getElementById("pantalla-menu").classList.add("oculto");
+            document.getElementById("pantalla-juego").classList.remove("oculto");
+            
+            culebrita = [
+                { x: 10 * tamanoCuadro, y: 10 * tamanoCuadro },
+                { x: 9 * tamanoCuadro, y: 10 * tamanoCuadro },
+                { x: 8 * tamanoCuadro, y: 10 * tamanoCuadro }
+            ];
+            
+            dx = tamanoCuadro; 
+            dy = 0; 
+            puntos = 0; 
+            velocidadActual = 0.5;
+            juegoActivo = true;
+
+            actualizarInterfazTexto();
+            generarComida();
+            dibujar(); 
+            bucleJuego();
+        }
+
+        function volverAlMenu() {
+            juegoActivo = false;
+            clearTimeout(timeoutId);
+            document.getElementById("pantalla-juego").classList.add("oculto");
+            document.getElementById("pantalla-menu").classList.remove("oculto");
+            document.getElementById("menu-monedas").innerText = "🪙 Monedas: " + monedas;
+        }
+
+        function bucleJuego() {
+            if (!juegoActivo) return;
+            actualizarJuego();
+            let tiempoEspera = 70 / velocidadActual; 
+            timeoutId = setTimeout(bucleJuego, tiempoEspera);
+        }
+
+        function actualizarJuego() {
+            const cabeza = { x: culebrita[0].x + dx, y: culebrita[0].y + dy };
+            culebrita.unshift(cabeza);
+
+            if (cabeza.x === comida.x && cabeza.y === comida.y) {
+                puntos += 10;
+                document.getElementById("puntuacion").innerText = textos[idiomaActual].puntos + puntos;
+                
+                if (puntos > recordMaximo) {
+                    recordMaximo = puntos;
+                    document.getElementById("record-display").innerText = textos[idiomaActual].record + recordMaximo;
+                    try { localStorage.setItem("recordSnake", recordMaximo); } catch(e){}
+                }
+
+                let nuevaVelocidad = 0.5 + (Math.floor(puntos / 100) * 0.1);
+                if (nuevaVelocidad > 2.0) nuevaVelocidad = 2.0; 
+                
+                velocidadActual = parseFloat(nuevaVelocidad.toFixed(1));
+                document.getElementById("velocidad").innerText = textos[idiomaActual].velocidad + velocidadActual + "x";
+
+                generarComida();
+            } else {
+                culebrita.pop();
+            }
+
+            if (cabeza.x < 0 || cabeza.x >= canvas.width || cabeza.y < 0 || cabeza.y >= canvas.height || choqueCulebrita(cabeza)) {
+                juegoActivo = false;
+                
+                let monedasGanadas = puntos; 
+                monedas += monedasGanadas;
+                try { localStorage.setItem("snakeMonedas", monedas); } catch(e){}
+
+                alert(textos[idiomaActual].alertaPerdiste + puntos + textos[idiomaActual].alertaMonedas.replace("$ MONEDAS", monedasGanadas));
+                volverAlMenu();
+            }
+
+            dibujar();
+        }
+
+        function dibujar() {
+            ctx.fillStyle = "#111";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = "#1a1a1a"; 
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= columnas; i++) {
+                ctx.beginPath(); ctx.moveTo(i * tamanoCuadro, 0); ctx.lineTo(i * tamanoCuadro, canvas.height); ctx.stroke();
+            }
+            for (let j = 0; j <= filas; j++) {
+                ctx.beginPath(); ctx.moveTo(0, j * tamanoCuadro); ctx.lineTo(canvas.width, j * tamanoCuadro); ctx.stroke();
+            }
+
+            const colorCulebra = listaColores[colorSeleccionadoIdx];
+
+            culebrita.forEach((parte, indice) => {
+                if (indice === 0) {
+                    ctx.fillStyle = colorCulebra.cabeza;
+                    ctx.fillRect(parte.x, parte.y, tamanoCuadro - 2, tamanoCuadro - 2);
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(parte.x + 4, parte.y + 4, 3, 3);
+                    ctx.fillRect(parte.x + 12, parte.y + 4, 3, 3);
+                } else {
+                    ctx.fillStyle = colorCulebra.hex;
+                    ctx.fillRect(parte.x, parte.y, tamanoCuadro - 2, tamanoCuadro - 2);
+                }
+            });
+
+            ctx.fillStyle = colorComida;
+            ctx.beginPath();
+            ctx.arc(comida.x + tamanoCuadro/2, comida.y + tamanoCuadro/2, tamanoCuadro/2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function generarComida() {
+            comida.x = Math.floor(Math.random() * columnas) * tamanoCuadro;
+            comida.y = Math.floor(Math.random() * filas) * tamanoCuadro;
+            colorComida = coloresComidaLista[Math.floor(Math.random() * coloresComidaLista.length)];
+        }
+
+        function choqueCulebrita(cabeza) {
+            for (let i = 1; i < culebrita.length; i++) {
+                if (culebrita[i].x === cabeza.x && culebrita[i].y === cabeza.y) return true;
+            }
+            return false;
+        }
+
+        function cambiarDireccionTeclado(evento) {
+            const teclas = { 37: "IZQUIERDA", 38: "ARRIBA", 39: "DERECHA", 40: "ABAJO" };
+            if (teclas[evento.keyCode]) cambiarDireccion(teclas[evento.keyCode]);
+        }
+
+        function cambiarDireccion(nuevaDireccion) {
+            if (!juegoActivo) return;
+            const yendoArriba = dy === -tamanoCuadro;
+            const yendoAbajo = dy === tamanoCuadro;
+            const yendoDerecha = dx === tamanoCuadro;
+            const yendoIzquierda = dx === -tamanoCuadro;
+
+            if (nuevaDireccion === "IZQUIERDA" && !yendoDerecha) { dx = -tamanoCuadro; dy = 0; }
+            if (nuevaDireccion === "ARRIBA" && !yendoAbajo) { dx = 0; dy = -tamanoCuadro; }
+            if (nuevaDireccion === "DERECHA" && !yendoIzquierda) { dx = tamanoCuadro; dy = 0; }
+            if (nuevaDireccion === "ABAJO" && !yendoArriba) { dx = 0; dy = tamanoCuadro; }
+        }
+    </script>
+</body>
+</html>
